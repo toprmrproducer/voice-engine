@@ -68,6 +68,7 @@ from pipecat.services.openai.stt import (
 from pipecat.services.openai.tts import OpenAITTSService, OpenAITTSSettings
 from pipecat.services.openrouter.llm import OpenRouterLLMService, OpenRouterLLMSettings
 from pipecat.services.rime.tts import RimeTTSService, RimeTTSSettings
+from pipecat_rumik import RumikTTSService, RumikTTSSettings
 from pipecat.services.sarvam.llm import SarvamLLMService, SarvamLLMSettings
 from pipecat.services.sarvam.stt import SarvamSTTService, SarvamSTTSettings
 from pipecat.services.sarvam.tts import SarvamTTSService, SarvamTTSSettings
@@ -418,6 +419,24 @@ def create_tts_service(
     )
     # Create function call filter to prevent TTS from speaking function call tags
     xml_function_tag_filter = XMLFunctionTagFilter()
+    if user_config.tts.provider == ServiceProviders.RUMIK.value:
+        return RumikTTSService(
+            api_key=user_config.tts.api_key,
+            gateway_url=getattr(
+                user_config.tts, "gateway_url", "https://silk-api.rumik.ai"
+            ),
+            settings=RumikTTSSettings(
+                model=user_config.tts.model,
+                voice=user_config.tts.voice,
+                description=getattr(user_config.tts, "description", None),
+                temperature=getattr(user_config.tts, "temperature", 0.6),
+                top_p=getattr(user_config.tts, "top_p", 0.95),
+                top_k=getattr(user_config.tts, "top_k", 50),
+            ),
+            full_response_aggregation=getattr(
+                user_config.tts, "full_response_aggregation", True
+            ),
+        )
     if user_config.tts.provider == ServiceProviders.DEEPGRAM.value:
         return DeepgramTTSService(
             api_key=user_config.tts.api_key,

@@ -88,6 +88,7 @@ class ServiceProviders(str, Enum):
     GOOGLE_VERTEX_REALTIME = "google_vertex_realtime"
     AZURE_REALTIME = "azure_realtime"
     SMALLEST = "smallest"
+    RUMIK = "rumik"
 
 
 class BaseServiceConfiguration(BaseModel):
@@ -118,6 +119,7 @@ class BaseServiceConfiguration(BaseModel):
         ServiceProviders.AZURE_REALTIME,
         ServiceProviders.SARVAM,
         ServiceProviders.SMALLEST,
+        ServiceProviders.RUMIK,
     ]
     api_key: str | list[str]
 
@@ -250,6 +252,11 @@ GOOGLE_VERTEX_REALTIME_PROVIDER_MODEL_CONFIG = provider_model_config(
     "Google Vertex Realtime"
 )
 DEEPGRAM_PROVIDER_MODEL_CONFIG = provider_model_config("Deepgram")
+RUMIK_PROVIDER_MODEL_CONFIG = provider_model_config(
+    "Rumik",
+    description="Rumik Silk low-latency Indian voice synthesis.",
+    provider_docs_url="https://docs.rumik.ai",
+)
 ELEVENLABS_PROVIDER_MODEL_CONFIG = provider_model_config("ElevenLabs")
 CARTESIA_PROVIDER_MODEL_CONFIG = provider_model_config("Cartesia")
 INWORLD_PROVIDER_MODEL_CONFIG = provider_model_config(
@@ -817,6 +824,40 @@ RealtimeConfig = Annotated[
 
 
 @register_tts
+class RumikTTSConfiguration(BaseTTSConfiguration):
+    model_config = RUMIK_PROVIDER_MODEL_CONFIG
+    provider: Literal[ServiceProviders.RUMIK] = ServiceProviders.RUMIK
+    model: str = Field(
+        default="mulberry",
+        description="Rumik Silk synthesis model.",
+        json_schema_extra={"examples": ["mulberry", "muga"]},
+    )
+    voice: str = Field(
+        default="speaker_1",
+        description="Rumik speaker preset or custom voice identifier.",
+        json_schema_extra={
+            "examples": ["speaker_1", "speaker_2", "speaker_3", "speaker_4"],
+            "allow_custom_input": True,
+        },
+    )
+    gateway_url: str = Field(
+        default="https://silk-api.rumik.ai",
+        description="Rumik Silk gateway base URL.",
+    )
+    description: str = Field(
+        default=(
+            "a warm Indian-English voice with a smooth timbre and natural "
+            "conversational pacing, like a friendly receptionist"
+        ),
+        description="Free-text voice direction for Rumik Silk.",
+    )
+    temperature: float = Field(default=0.6, ge=0.0, le=2.0)
+    top_p: float = Field(default=0.95, ge=0.0, le=1.0)
+    top_k: int = Field(default=50, ge=1, le=200)
+    full_response_aggregation: bool = Field(default=True)
+
+
+@register_tts
 class DeepgramTTSConfiguration(BaseServiceConfiguration):
     model_config = DEEPGRAM_PROVIDER_MODEL_CONFIG
     provider: Literal[ServiceProviders.DEEPGRAM] = ServiceProviders.DEEPGRAM
@@ -1276,6 +1317,7 @@ class SmallestAITTSConfiguration(BaseTTSConfiguration):
 
 TTSConfig = Annotated[
     Union[
+        RumikTTSConfiguration,
         DeepgramTTSConfiguration,
         GoogleTTSConfiguration,
         OpenAITTSService,

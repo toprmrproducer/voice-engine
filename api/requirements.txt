@@ -19,6 +19,7 @@ email-validator==2.3.0
 posthog==7.19.1
 fastmcp==3.2.4
 tuner-pipecat-sdk==0.2.0
+pipecat-rumik==0.1.4
 PyNaCl==1.6.2
 cryptography==48.0.1
 anthropic>=0.69.0

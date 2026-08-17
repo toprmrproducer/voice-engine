@@ -64,6 +64,7 @@ class UserConfigurationValidator:
             ServiceProviders.RIME.value: self._check_rime_api_key,
             ServiceProviders.MINIMAX.value: self._check_minimax_api_key,
             ServiceProviders.SMALLEST.value: self._check_smallest_api_key,
+            ServiceProviders.RUMIK.value: self._check_rumik_api_key,
         }
 
     async def validate(
@@ -342,6 +343,11 @@ class UserConfigurationValidator:
         )
 
     def _check_sarvam_api_key(self, model: str, api_key: str) -> bool:
+        return True
+
+    def _check_rumik_api_key(self, model: str, api_key: str) -> bool:
+        # Rumik does not expose a read-only key introspection endpoint. Runtime
+        # readiness is verified with a real synthesis during deployment QA.
         return True
 
     def _check_openrouter_api_key(self, model: str, api_key: str) -> bool:
