@@ -1,6 +1,6 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, CreditCard, Landmark, Smartphone, WalletCards } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -220,21 +220,16 @@ export function CreditsSection() {
 
       {data.unlimited ? (
         <p className="text-sm text-muted-foreground">
-          Your account has unlimited calling — no top-up needed.
-        </p>
-      ) : !data.configured ? (
-        <p className="text-sm text-muted-foreground">
-          Top-ups aren&apos;t enabled yet. Once the payment gateway is connected
-          you&apos;ll be able to buy more minutes here.
+          Your account has unlimited calling. No top-up is needed.
         </p>
       ) : (
         <div>
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="text-label font-semibold text-foreground">
-              Top up your credits
+              Plans
             </h2>
             <span className="text-xs text-muted-foreground">
-              Secure checkout via PayU
+              {data.configured ? "Secure checkout via PayU" : "Plan catalog"}
             </span>
           </div>
           <div className="mt-3 grid items-stretch gap-4 sm:grid-cols-3">
@@ -328,10 +323,12 @@ export function CreditsSection() {
                   <Button
                     className="mt-5 w-full"
                     variant={isCurrent ? "outline" : "brand"}
-                    disabled={busy === pack.id}
+                    disabled={!data.configured || busy === pack.id}
                     onClick={() => buy(pack)}
                   >
-                    {busy === pack.id
+                    {!data.configured
+                      ? "Checkout unavailable"
+                      : busy === pack.id
                       ? "Opening…"
                       : isCurrent
                         ? "Add more"
@@ -377,6 +374,31 @@ export function CreditsSection() {
               Or send us your details
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-[var(--shadow-card)]">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Payment options</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Choose your preferred method inside the secure PayU checkout.
+          </p>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: "UPI", icon: Smartphone },
+            { label: "Credit & debit cards", icon: CreditCard },
+            { label: "Net banking", icon: Landmark },
+            { label: "Wallets", icon: WalletCards },
+          ].map(({ label, icon: Icon }) => (
+            <div
+              key={label}
+              className="flex min-h-16 items-center gap-2.5 rounded-xl border border-border/60 bg-muted/20 px-3 py-3 text-sm font-medium text-foreground"
+            >
+              <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <span>{label}</span>
+            </div>
+          ))}
         </div>
       </div>
 

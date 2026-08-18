@@ -6,7 +6,6 @@ import {
   AudioLines,
   BarChart3,
   Brain,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
@@ -35,11 +34,6 @@ import React, { useRef } from "react";
 
 import ThemeToggle from "@/components/ThemeSwitcher";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,14 +75,12 @@ type SidebarNavItem = {
   adminOnly?: boolean;
   /** Only visible to superusers (deployment owner; stricter than adminOnly). */
   superuserOnly?: boolean;
-  /** Only visible if the org's plan includes this feature (superuser always). */
+  /** Feature required after navigation. The destination explains upgrades. */
   requiresFeature?: "api" | "mcp" | "build_with_ai";
 };
 
 type SidebarNavSection = {
   label?: string;
-  /** Render as a collapsible group (chevron header, collapsed by default). */
-  collapsible?: boolean;
   items: SidebarNavItem[];
 };
 
@@ -175,7 +167,6 @@ const NAV_SECTIONS: SidebarNavSection[] = [
   },
   {
     label: "ADVANCED",
-    collapsible: true,
     items: [
       {
         title: "Recordings",
@@ -236,32 +227,11 @@ export function AppSidebar() {
   const { state, isMobile, setOpenMobile } = useSidebar();
   const { provider, getSelectedTeam, logout, user } = useAuth();
   const { isAdmin } = useIsAdmin();
-  const { isSuperuser, planFeatures } = useUserConfig();
+  const { isSuperuser } = useUserConfig();
   const { openHireExpert } = useLeadForms();
   const { telnyxMissingWebhookPublicKeyCount } = useTelephonyConfigWarnings();
   const hasTelephonyWarning = telnyxMissingWebhookPublicKeyCount > 0;
   const isCollapsed = !isMobile && state === "collapsed";
-
-  // "Advanced" nav group: collapsed by default, expand state persisted across
-  // navigations (best-effort; SSR-safe since localStorage is read after mount).
-  const [advancedOpen, setAdvancedOpen] = React.useState(false);
-  React.useEffect(() => {
-    try {
-      if (window.localStorage.getItem("sidebar:advanced-open") === "true") {
-        setAdvancedOpen(true);
-      }
-    } catch {
-      // localStorage unavailable (private mode) — keep default collapsed.
-    }
-  }, []);
-  const handleAdvancedOpenChange = React.useCallback((open: boolean) => {
-    setAdvancedOpen(open);
-    try {
-      window.localStorage.setItem("sidebar:advanced-open", String(open));
-    } catch {
-      // Non-fatal: state still toggles for this session.
-    }
-  }, []);
 
   // Get selected team for Stack auth (cast to Team type from Stack)
   // Stabilize the reference so SelectedTeamSwitcher only sees a change when the team ID changes,
@@ -461,10 +431,7 @@ export function AppSidebar() {
           const visibleItems = section.items.filter(
             (item) =>
               (!item.adminOnly || isAdmin) &&
-              (!item.superuserOnly || isSuperuser) &&
-              (!item.requiresFeature ||
-                isSuperuser ||
-                planFeatures[item.requiresFeature])
+              (!item.superuserOnly || isSuperuser)
           );
           if (visibleItems.length === 0) {
             return null;
@@ -479,38 +446,6 @@ export function AppSidebar() {
               ))}
             </SidebarMenu>
           );
-
-          // Collapsible group (e.g. "Advanced"): only collapse in the expanded
-          // sidebar. In icon-only mode a chevron header is meaningless, so the
-          // items always render as icons like every other group.
-          if (section.collapsible && section.label && !isCollapsed) {
-            return (
-              <Collapsible
-                key={section.label}
-                open={advancedOpen}
-                onOpenChange={handleAdvancedOpenChange}
-                asChild
-              >
-                <SidebarGroup className="mt-6">
-                  <CollapsibleTrigger asChild>
-                    <button
-                      type="button"
-                      className="notranslate flex h-8 w-full shrink-0 cursor-pointer items-center rounded-md px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
-                      translate="no"
-                    >
-                      {section.label}
-                      {advancedOpen ? (
-                        <ChevronDown className="ml-auto h-3.5 w-3.5" />
-                      ) : (
-                        <ChevronRight className="ml-auto h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>{menu}</CollapsibleContent>
-                </SidebarGroup>
-              </Collapsible>
-            );
-          }
 
           return (
             <SidebarGroup
