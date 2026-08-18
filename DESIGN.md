@@ -34,6 +34,20 @@ navigation, and clear hierarchy rather than decorative dashboard chrome.
   and wallets. Never imply a payment completed until the verified callback and
   ledger credit both succeed.
 
+## Marketing surface
+
+- The public landing page uses the same ivory, ink, and bronze system as the
+  application. It must feel like the front door to the product, not a separate
+  campaign template.
+- Lead with a concrete voice-agent outcome, then show product capabilities,
+  implementation proof, operational benefits, a closing call to action, FAQ,
+  and footer.
+- Proof must be attributable to the repository or a completed test. Never use
+  invented customers, testimonials, usage totals, or performance claims.
+- Provider readiness and hosted activation are separate states. Rumik may be
+  presented as integrated and adapter-tested, while live use must clearly say
+  that an organization API key is required.
+
 ## Components and states
 
 - Reuse the existing Button, card, badge, sidebar, and dialog primitives.
