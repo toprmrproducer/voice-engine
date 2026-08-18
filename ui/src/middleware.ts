@@ -6,7 +6,7 @@ import { getServerBackendUrl } from '@/lib/apiClient';
 const OSS_TOKEN_COOKIE = 'dograh_auth_token';
 
 // Paths that don't require authentication in OSS mode
-const PUBLIC_PATHS = ['/auth/login', '/auth/signup'];
+const PUBLIC_PATHS = ['/landing', '/auth/login', '/auth/signup'];
 
 let cachedAuthProvider: string | null = null;
 
