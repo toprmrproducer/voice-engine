@@ -255,7 +255,10 @@ class TelephonyConfigurationModel(Base):
     )
     name = Column(String(64), nullable=False)
     provider = Column(String(32), nullable=False)
-    credentials = Column(JSON, nullable=False, default=dict)
+    # Provider credentials are transparently encrypted as one JSON envelope.
+    # EncryptedJSON is DDL-identical to JSON, so existing rows remain readable
+    # and are encrypted the next time they are written.
+    credentials = Column(EncryptedJSON, nullable=False, default=dict)
     is_default_outbound = Column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
