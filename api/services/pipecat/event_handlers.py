@@ -7,7 +7,7 @@ from api.enums import PostHogEvent, WorkflowRunState
 from api.services.campaign.circuit_breaker import circuit_breaker
 from api.services.integrations import IntegrationRuntimeSession
 from api.services.pipecat.audio_config import AudioConfig
-from api.services.pipecat.audio_playback import play_audio_loop
+from api.services.pipecat.audio_playback import play_audio, play_audio_loop
 from api.services.pipecat.in_memory_buffers import (
     InMemoryLogsBuffer,
     InMemoryRecordingBuffers,
@@ -24,6 +24,51 @@ from pipecat.frames.frames import (
 from pipecat.pipeline.worker import PipelineWorker
 from pipecat.processors.audio.audio_buffer_processor import AudioBufferProcessor
 from pipecat.utils.enums import EndTaskReason
+
+
+async def queue_start_opening_audio_first(
+    engine: PipecatEngine,
+    *,
+    prefetched_audio=None,
+    transport_output=None,
+    sample_rate: int = 16000,
+) -> None:
+    """Queue a recorded opener before potentially slow realtime model setup."""
+    start_node_id = engine.workflow.start_node_id
+    audio_opening_queued = False
+    greeting_info = engine.get_start_greeting()
+    if (
+        greeting_info
+        and greeting_info[0] == "audio"
+        and prefetched_audio is not None
+        and transport_output is not None
+    ):
+        await play_audio(
+            prefetched_audio.audio,
+            sample_rate=sample_rate,
+            queue_frame=transport_output.queue_frame,
+            transcript=prefetched_audio.transcript,
+            append_to_context=True,
+        )
+        audio_opening_queued = True
+    elif greeting_info and greeting_info[0] == "audio":
+        audio_opening_queued = (
+            await engine.queue_node_opening(
+                node_id=start_node_id,
+                previous_node_id=None,
+                generate_if_no_greeting=False,
+            )
+            == "greeting"
+        )
+
+    await engine.set_node(start_node_id)
+
+    if not audio_opening_queued:
+        await engine.queue_node_opening(
+            node_id=start_node_id,
+            previous_node_id=None,
+            generate_if_no_greeting=True,
+        )
 
 
 async def _bump_campaign_spend_for_run(
@@ -125,24 +170,19 @@ def register_event_handlers(
     ready_state = {
         "pipeline_started": False,
         "client_connected": False,
-        "start_node_set": False,
         "initial_response_triggered": False,
     }
-
-    async def prepare_start_node():
-        """Configure the opening node before the carrier answers when possible.
-
-        Realtime providers establish their model session when ``set_node``
-        applies the node's system instruction. Doing this as soon as the
-        pipeline starts lets that connection overlap with outbound ringing,
-        instead of making the callee wait through model setup after answering.
-        Pre-call fetch workflows keep the existing post-fetch ordering because
-        their prompt may depend on fetched variables.
-        """
-        if ready_state["start_node_set"] or pre_call_fetch_task is not None:
-            return
-        await engine.set_node(engine.workflow.start_node_id)
-        ready_state["start_node_set"] = True
+    recorded_opening_task = None
+    start_greeting = engine.get_start_greeting()
+    if (
+        start_greeting
+        and start_greeting[0] == "audio"
+        and start_greeting[1]
+        and engine._fetch_recording_audio
+    ):
+        recorded_opening_task = asyncio.create_task(
+            engine._fetch_recording_audio(recording_pk=int(start_greeting[1]))
+        )
 
     async def maybe_trigger_initial_response():
         """Start the conversation after both pipeline_started and client_connected events.
@@ -200,16 +240,21 @@ def register_event_handlers(
                         f"{list(fetch_result.keys())}"
                     )
 
-            # Pre-call fetch workflows must set the node only after fetched
-            # variables are merged. Other workflows were prepared while the
-            # carrier was still ringing.
-            if not ready_state["start_node_set"]:
-                await engine.set_node(engine.workflow.start_node_id)
-                ready_state["start_node_set"] = True
-            await engine.queue_node_opening(
-                node_id=engine.workflow.start_node_id,
-                previous_node_id=None,
-                generate_if_no_greeting=True,
+            # A cached audio greeting must reach the caller before realtime
+            # model setup. Connecting Gemini in set_node can take seconds, while
+            # queueing raw audio is immediate. The greeting is appended to the
+            # assistant context so the model does not introduce itself again.
+            prefetched_audio = None
+            if recorded_opening_task is not None:
+                try:
+                    prefetched_audio = await recorded_opening_task
+                except Exception:
+                    logger.exception("Failed to prefetch recorded start greeting")
+            await queue_start_opening_audio_first(
+                engine,
+                prefetched_audio=prefetched_audio,
+                transport_output=transport.output(),
+                sample_rate=audio_config.pipeline_sample_rate or 16000,
             )
 
     @transport.event_handler("on_client_connected")
@@ -238,7 +283,6 @@ def register_event_handlers(
     async def on_pipeline_started(_task: PipelineWorker, _frame: Frame):
         logger.debug("In on_pipeline_started callback handler")
         ready_state["pipeline_started"] = True
-        await prepare_start_node()
         await maybe_trigger_initial_response()
 
     @task.event_handler("on_pipeline_error")

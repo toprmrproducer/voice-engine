@@ -717,6 +717,17 @@ async def _run_pipeline(
     )
     engine.set_fetch_recording_audio(fetch_audio)
 
+    # Realtime workflows can also use pre-recorded greetings. Warm their audio
+    # while the outbound leg is ringing so the first frame can be queued as soon
+    # as the media WebSocket connects.
+    if has_recordings:
+        asyncio.create_task(
+            warm_recording_cache(
+                organization_id=workflow.organization_id,
+                pipeline_sample_rate=audio_config.pipeline_sample_rate,
+            )
+        )
+
     voicemail_config = (workflow.workflow_configurations or {}).get(
         "voicemail_detection", {}
     )
@@ -792,14 +803,6 @@ async def _run_pipeline(
         recording_router = RecordingRouterProcessor(
             audio_sample_rate=audio_config.pipeline_sample_rate,
             fetch_recording_audio=fetch_audio,
-        )
-        # Warm the recording cache in the background so audio is ready
-        # before the first playback request.
-        asyncio.create_task(
-            warm_recording_cache(
-                organization_id=workflow.organization_id,
-                pipeline_sample_rate=audio_config.pipeline_sample_rate,
-            )
         )
 
     # Build the pipeline

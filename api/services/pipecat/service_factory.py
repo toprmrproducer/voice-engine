@@ -984,10 +984,10 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
             "model": model,
             "voice": voice or "Charon",
             "vad": GeminiVADParams(
-                start_sensitivity=StartSensitivity.START_SENSITIVITY_HIGH,
-                end_sensitivity=EndSensitivity.END_SENSITIVITY_HIGH,
+                start_sensitivity=StartSensitivity.START_SENSITIVITY_LOW,
+                end_sensitivity=EndSensitivity.END_SENSITIVITY_LOW,
                 prefix_padding_ms=20,
-                silence_duration_ms=200,
+                silence_duration_ms=100,
             ),
             "max_tokens": 256,
             "thinking": {"thinking_budget": 0},

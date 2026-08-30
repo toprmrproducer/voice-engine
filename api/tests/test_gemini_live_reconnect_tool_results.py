@@ -67,9 +67,9 @@ def test_factory_tunes_gemini_live_for_low_latency_pstn_conversation():
     vad = service._settings.vad
 
     assert isinstance(service, DograhGeminiLiveLLMService)
-    assert vad.start_sensitivity == StartSensitivity.START_SENSITIVITY_HIGH
-    assert vad.end_sensitivity == EndSensitivity.END_SENSITIVITY_HIGH
-    assert vad.silence_duration_ms == 200
+    assert vad.start_sensitivity == StartSensitivity.START_SENSITIVITY_LOW
+    assert vad.end_sensitivity == EndSensitivity.END_SENSITIVITY_LOW
+    assert vad.silence_duration_ms == 100
     assert service._settings.max_tokens == 256
     assert service._settings.thinking == {"thinking_budget": 0}
     assert service._settings.enable_affective_dialog is True
