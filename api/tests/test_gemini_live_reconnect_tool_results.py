@@ -7,8 +7,6 @@ from pipecat.frames.frames import TranscriptionFrame
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameDirection
 
-from api.schemas.user_configuration import UserConfiguration
-from api.services.configuration.registry import GoogleRealtimeLLMConfiguration
 from api.services.pipecat.realtime.gemini_live import DograhGeminiLiveLLMService
 from api.services.pipecat.service_factory import create_realtime_llm_service
 
@@ -51,9 +49,8 @@ def _make_tool_result_context(tool_call_id: str) -> LLMContext:
 
 
 def test_factory_uses_locally_driven_gemini_activity_windows():
-    user_config = UserConfiguration(
-        is_realtime=True,
-        realtime=GoogleRealtimeLLMConfiguration(
+    user_config = SimpleNamespace(
+        realtime=SimpleNamespace(
             provider="google_realtime",
             api_key="google-key",
             model="gemini-2.5-flash-native-audio-preview-12-2025",
