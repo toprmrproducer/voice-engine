@@ -975,7 +975,6 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
         from api.services.pipecat.realtime.gemini_live import (
             DograhGeminiLiveLLMService,
         )
-        from google.genai.types import EndSensitivity, StartSensitivity
         from pipecat.services.google.gemini_live.llm import GeminiVADParams
 
         # Gemini Live enables input/output audio transcription by default
@@ -983,12 +982,10 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
         settings_kwargs = {
             "model": model,
             "voice": voice or "Charon",
-            "vad": GeminiVADParams(
-                start_sensitivity=StartSensitivity.START_SENSITIVITY_LOW,
-                end_sensitivity=EndSensitivity.END_SENSITIVITY_LOW,
-                prefix_padding_ms=20,
-                silence_duration_ms=100,
-            ),
+            # PSTN background noise is too unpredictable for Gemini's server
+            # VAD.  Local Silero VAD drives explicit activity windows instead,
+            # so idle line noise is never streamed as a user turn.
+            "vad": GeminiVADParams(disabled=True),
             "max_tokens": 256,
             "thinking": {"thinking_budget": 0},
             "enable_affective_dialog": True,

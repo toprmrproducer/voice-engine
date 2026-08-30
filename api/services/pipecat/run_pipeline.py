@@ -102,14 +102,23 @@ def _create_realtime_user_turn_config(provider: str):
         ServiceProviders.GOOGLE_REALTIME.value,
         ServiceProviders.GOOGLE_VERTEX_REALTIME.value,
     }:
-        # Let Gemini Live own barge-in via its server-side VAD, but keep local
-        # Silero VAD for early user-turn start and speaking-state tracking.
+        # Gemini's server VAD sees the whole PSTN channel and can turn low-level
+        # background noise into false turns.  Drive Gemini with local Silero
+        # activity windows instead.  These thresholds retain short utterances
+        # such as "hello" while the start/stop hysteresis rejects line noise.
         return (
             UserTurnStrategies(
                 start=[VADUserTurnStartStrategy(enable_interruptions=False)],
                 stop=[SpeechTimeoutUserTurnStopStrategy()],
             ),
-            SileroVADAnalyzer(params=VADParams(stop_secs=0.2)),
+            SileroVADAnalyzer(
+                params=VADParams(
+                    confidence=0.15,
+                    start_secs=0.032,
+                    stop_secs=0.12,
+                    min_volume=0.2,
+                )
+            ),
         )
 
     if provider == ServiceProviders.OPENAI_REALTIME.value:

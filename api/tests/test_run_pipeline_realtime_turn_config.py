@@ -20,6 +20,10 @@ def test_gemini_realtime_uses_local_vad_without_local_interruptions():
     )
 
     assert isinstance(vad_analyzer, SileroVADAnalyzer)
+    assert vad_analyzer.params.confidence == 0.15
+    assert vad_analyzer.params.start_secs == 0.032
+    assert vad_analyzer.params.stop_secs == 0.12
+    assert vad_analyzer.params.min_volume == 0.2
     assert len(strategies.start) == 1
     assert isinstance(strategies.start[0], VADUserTurnStartStrategy)
     assert strategies.start[0]._enable_interruptions is False

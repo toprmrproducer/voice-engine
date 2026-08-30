@@ -3,7 +3,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from google.genai.types import EndSensitivity, StartSensitivity
 from pipecat.frames.frames import TranscriptionFrame
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameDirection
@@ -51,7 +50,7 @@ def _make_tool_result_context(tool_call_id: str) -> LLMContext:
     )
 
 
-def test_factory_tunes_gemini_live_for_low_latency_pstn_conversation():
+def test_factory_uses_locally_driven_gemini_activity_windows():
     user_config = UserConfiguration(
         is_realtime=True,
         realtime=GoogleRealtimeLLMConfiguration(
@@ -67,9 +66,7 @@ def test_factory_tunes_gemini_live_for_low_latency_pstn_conversation():
     vad = service._settings.vad
 
     assert isinstance(service, DograhGeminiLiveLLMService)
-    assert vad.start_sensitivity == StartSensitivity.START_SENSITIVITY_LOW
-    assert vad.end_sensitivity == EndSensitivity.END_SENSITIVITY_LOW
-    assert vad.silence_duration_ms == 100
+    assert vad.disabled is True
     assert service._settings.max_tokens == 256
     assert service._settings.thinking == {"thinking_budget": 0}
     assert service._settings.enable_affective_dialog is True
