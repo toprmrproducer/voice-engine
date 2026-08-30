@@ -3,11 +3,15 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from google.genai.types import EndSensitivity, StartSensitivity
 from pipecat.frames.frames import TranscriptionFrame
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameDirection
 
+from api.schemas.user_configuration import UserConfiguration
+from api.services.configuration.registry import GoogleRealtimeLLMConfiguration
 from api.services.pipecat.realtime.gemini_live import DograhGeminiLiveLLMService
+from api.services.pipecat.service_factory import create_realtime_llm_service
 
 
 class _TestDograhGeminiLiveLLMService(DograhGeminiLiveLLMService):
@@ -45,6 +49,30 @@ def _make_tool_result_context(tool_call_id: str) -> LLMContext:
             }
         ]
     )
+
+
+def test_factory_tunes_gemini_live_for_low_latency_pstn_conversation():
+    user_config = UserConfiguration(
+        is_realtime=True,
+        realtime=GoogleRealtimeLLMConfiguration(
+            provider="google_realtime",
+            api_key="google-key",
+            model="gemini-2.5-flash-native-audio-preview-12-2025",
+            voice="Charon",
+            language="en-US",
+        ),
+    )
+
+    service = create_realtime_llm_service(user_config, audio_config=SimpleNamespace())
+    vad = service._settings.vad
+
+    assert isinstance(service, DograhGeminiLiveLLMService)
+    assert vad.start_sensitivity == StartSensitivity.START_SENSITIVITY_HIGH
+    assert vad.end_sensitivity == EndSensitivity.END_SENSITIVITY_HIGH
+    assert vad.silence_duration_ms == 200
+    assert service._settings.max_tokens == 256
+    assert service._settings.thinking == {"thinking_budget": 0}
+    assert service._settings.enable_affective_dialog is True
 
 
 @pytest.mark.asyncio

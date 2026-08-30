@@ -125,8 +125,24 @@ def register_event_handlers(
     ready_state = {
         "pipeline_started": False,
         "client_connected": False,
+        "start_node_set": False,
         "initial_response_triggered": False,
     }
+
+    async def prepare_start_node():
+        """Configure the opening node before the carrier answers when possible.
+
+        Realtime providers establish their model session when ``set_node``
+        applies the node's system instruction. Doing this as soon as the
+        pipeline starts lets that connection overlap with outbound ringing,
+        instead of making the callee wait through model setup after answering.
+        Pre-call fetch workflows keep the existing post-fetch ordering because
+        their prompt may depend on fetched variables.
+        """
+        if ready_state["start_node_set"] or pre_call_fetch_task is not None:
+            return
+        await engine.set_node(engine.workflow.start_node_id)
+        ready_state["start_node_set"] = True
 
     async def maybe_trigger_initial_response():
         """Start the conversation after both pipeline_started and client_connected events.
@@ -184,9 +200,12 @@ def register_event_handlers(
                         f"{list(fetch_result.keys())}"
                     )
 
-            # Set the start node now (after pre-call fetch data is merged)
-            # so that render_template() has the complete _call_context_vars.
-            await engine.set_node(engine.workflow.start_node_id)
+            # Pre-call fetch workflows must set the node only after fetched
+            # variables are merged. Other workflows were prepared while the
+            # carrier was still ringing.
+            if not ready_state["start_node_set"]:
+                await engine.set_node(engine.workflow.start_node_id)
+                ready_state["start_node_set"] = True
             await engine.queue_node_opening(
                 node_id=engine.workflow.start_node_id,
                 previous_node_id=None,
@@ -219,6 +238,7 @@ def register_event_handlers(
     async def on_pipeline_started(_task: PipelineWorker, _frame: Frame):
         logger.debug("In on_pipeline_started callback handler")
         ready_state["pipeline_started"] = True
+        await prepare_start_node()
         await maybe_trigger_initial_response()
 
     @task.event_handler("on_pipeline_error")
