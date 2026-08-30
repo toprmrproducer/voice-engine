@@ -8,6 +8,7 @@ from pipecat.turns.user_start.vad_user_turn_start_strategy import (
 from pipecat.turns.user_stop import (
     ExternalUserTurnStopStrategy,
     SpeechTimeoutUserTurnStopStrategy,
+    TurnAnalyzerUserTurnStopStrategy,
 )
 
 from api.services.configuration.registry import ServiceProviders
@@ -28,7 +29,9 @@ def test_gemini_realtime_uses_local_vad_without_local_interruptions():
     assert isinstance(strategies.start[0], VADUserTurnStartStrategy)
     assert strategies.start[0]._enable_interruptions is False
     assert len(strategies.stop) == 1
-    assert isinstance(strategies.stop[0], SpeechTimeoutUserTurnStopStrategy)
+    assert isinstance(strategies.stop[0], TurnAnalyzerUserTurnStopStrategy)
+    assert strategies.stop[0].wait_for_transcript is False
+    assert strategies.stop[0]._turn_analyzer.params.stop_secs == 0.5
 
 
 def test_gemini_vertex_realtime_uses_same_turn_config_as_gemini_live():

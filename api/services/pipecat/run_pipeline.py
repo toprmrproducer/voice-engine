@@ -109,7 +109,14 @@ def _create_realtime_user_turn_config(provider: str):
         return (
             UserTurnStrategies(
                 start=[VADUserTurnStartStrategy(enable_interruptions=False)],
-                stop=[SpeechTimeoutUserTurnStopStrategy()],
+                stop=[
+                    TurnAnalyzerUserTurnStopStrategy(
+                        turn_analyzer=LocalSmartTurnAnalyzerV3(
+                            params=SmartTurnParams(stop_secs=0.5)
+                        ),
+                        wait_for_transcript=False,
+                    )
+                ],
             ),
             SileroVADAnalyzer(
                 params=VADParams(
