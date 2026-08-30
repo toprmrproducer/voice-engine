@@ -68,7 +68,6 @@ from pipecat.services.openai.stt import (
 from pipecat.services.openai.tts import OpenAITTSService, OpenAITTSSettings
 from pipecat.services.openrouter.llm import OpenRouterLLMService, OpenRouterLLMSettings
 from pipecat.services.rime.tts import RimeTTSService, RimeTTSSettings
-from pipecat_rumik import RumikTTSService, RumikTTSSettings
 from pipecat.services.sarvam.llm import SarvamLLMService, SarvamLLMSettings
 from pipecat.services.sarvam.stt import SarvamSTTService, SarvamSTTSettings
 from pipecat.services.sarvam.tts import SarvamTTSService, SarvamTTSSettings
@@ -420,6 +419,11 @@ def create_tts_service(
     # Create function call filter to prevent TTS from speaking function call tags
     xml_function_tag_filter = XMLFunctionTagFilter()
     if user_config.tts.provider == ServiceProviders.RUMIK.value:
+        # Rumik is an optional deployment overlay.  Import it only when the
+        # selected TTS provider needs it so realtime-only images can boot and
+        # create Gemini sessions without the package installed.
+        from pipecat_rumik import RumikTTSService, RumikTTSSettings
+
         return RumikTTSService(
             api_key=user_config.tts.api_key,
             gateway_url=getattr(
